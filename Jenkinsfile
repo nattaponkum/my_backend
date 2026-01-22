@@ -32,5 +32,13 @@ pipeline {
         sh 'echo "I am running on the Kubernetes Agent pod"'
       }
     }
+    stage('Build Application') {
+      steps {
+        container('my-builder') {
+          sh 'npm install'
+          sh 'npm run build'
+        }
+      }
+    }
   }
 }
