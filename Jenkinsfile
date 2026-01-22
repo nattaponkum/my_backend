@@ -1,29 +1,36 @@
 pipeline {
-    agent any
-    stages {
-        stage('Test npm') {
-            agent {
-                docker {
-                    image 'node:16-alpine' // ใช้ Image นี้ที่มี Node.js มาให้แล้ว
-                    reuseNode true
-                }
-            }
-            steps {
-                sh 'npm --version'
-                sh 'node --version'
-            }
-        }
-        stage('Build') {
-            agent {
-                docker {
-                    image 'node:16-alpine' // ใช้ Image นี้ที่มี Node.js มาให้แล้ว
-                    reuseNode true
-                }
-            }
-            steps {
-                sh 'npm ci'
-                sh 'npm run build'
-            }
-        }
+  agent {
+    kubernetes {
+      // This YAML defines the "Docker Container" you want to use
+      yaml '''
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: my-builder  # We will refer to this name later
+            image: node:18-alpine
+            command:
+            - cat
+            tty: true
+      '''
     }
+  }
+  stages {
+    stage('Check Node Version') {
+      steps {
+        // We tell Jenkins: "Run this step inside the 'my-builder' container"
+        container('my-builder') {
+          sh 'node --version'
+          sh 'npm --version'
+          sh 'echo "Hello from inside the container!"'
+        }
+      }
+    }
+    stage('Check Host') {
+      steps {
+        // This runs in the default 'jnlp' agent (the base runner)
+        sh 'echo "I am running on the Kubernetes Agent pod"'
+      }
+    }
+  }
 }
